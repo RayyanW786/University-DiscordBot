@@ -34,8 +34,8 @@ Follow these steps to set up the bot locally.
 1. Clone the repository:
 
    ```bash
-   git clone https://github.com/yourusername/university-discord-bot.git
-   cd university-discord-bot
+   git clone https://github.com/RayyanW786/University-DiscordBot.git
+   cd University-DiscordBot
    ```
 
 2. Create a virtual environment (optional but recommended):
@@ -108,5 +108,5 @@ This project is licensed under the [Mozilla Public License 2.0](https://www.mozi
 
 ## Credits
 
-This bot is inspired by [RoboDanny](https://github.com/Rapptz/RoboDanny), a well-known Discord bot. Thanks to the original authors for their contributions!
+This bot is inspired by [RoboDanny](https://github.com/Rapptz/RoboDanny), a well-known Discord bot made by Danny!
 
