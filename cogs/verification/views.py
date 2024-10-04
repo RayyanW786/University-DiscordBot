@@ -17,7 +17,7 @@ load_dotenv()
 UNIVERSITY_EMAIL_SUFFIX = os.getenv("UNIVERSITY_EMAIL_SUFFIX")
 EMAIL_RE = rf"\d+@{re.escape(UNIVERSITY_EMAIL_SUFFIX)}"
 try:
-    ROLES_ON_VERIFICTION: List[int] = [int(v) for v in os.getenv("ROLE_ON_VERIFICATION").split(",")]
+    ROLES_ON_VERIFICTION: List[int] = [int(v) for v in os.getenv("ROLES_ON_VERIFICATION").split(",")]
 except AttributeError:
     ROLES_ON_VERIFICTION = []
 

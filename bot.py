@@ -260,12 +260,7 @@ class UniversityBot(commands.AutoShardedBot):
             if self.maintenance_mode and ctx.command:  # this make sures one of the bot's cmd was run, inorder to not
                 # send warnings every other msg/
                 if author_id not in self.owner_ids:
-                    await ctx.send_embed("info", "Phantom  is currently on maintenance mode.", True)
-                    return
-            if author_id not in self.owner_ids:
-                if author_id in self.blacklist.users:
-                    return
-                elif guild_id in self.blacklist.guilds:
+                    await ctx.send_embed("info", "Bot is currently on maintenance mode.", True)
                     return
 
             if (message.raw_mentions and message.guild.me.id in message.raw_mentions) and (len(message.content) == len(
