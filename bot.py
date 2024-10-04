@@ -301,8 +301,7 @@ class UniversityBot(commands.AutoShardedBot):
         await self.process_commands(message)
 
     async def get_prefix(self, message: discord.Message) -> str:
-        prefix = ["p!", "P!"]
-        return commands.when_mentioned_or(*prefix)(self, message)
+        return commands.when_mentioned_or(*self.prefixs)(self, message)
 
     async def close(self) -> None:
         log.info("Shutdown initiated, cleaning up...")
