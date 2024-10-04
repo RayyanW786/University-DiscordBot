@@ -20,7 +20,10 @@ if TYPE_CHECKING:
 
 
 load_dotenv()
-
+try:
+    BOT_OWNER_IDS: List[int] = [int(v) for v in os.getenv("BOT_OWNER_IDS").split(",")]
+except AttributeError:
+    BOT_OWNER_IDS = None
 log = logging.getLogger(__name__)
 
 description = """
@@ -60,7 +63,7 @@ class UniversityBot(commands.AutoShardedBot):
 
     async def setup_hook(self) -> None:
         self.session = aiohttp.ClientSession()
-        self.owner_ids: List[int] = [613752401878450176]
+        self.owner_ids: List[int] = BOT_OWNER_IDS if BOT_OWNER_IDS else self.owner_ids
         self.prefixs = [",", "cs!"]
         # database setup
         self.db: MongoManager = MongoManager(os.getenv("MONGO"), database_name="phantom")
