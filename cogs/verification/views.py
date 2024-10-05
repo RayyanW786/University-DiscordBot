@@ -39,7 +39,11 @@ class SetEmailModal(Modal, title="Edit Email Address"):
         if not re.fullmatch(EMAIL_RE, self.email.value):
             await interaction.response.send_message("Invalid Email!", ephemeral=True)
             return
-
+        found = await self.bot.db.verification.find({"email": self.email.value})
+        if found:
+            # email is already been used to verify another person
+            await interaction.response.send_message("This email has already been used to verify another party!", ephemeral=True)
+            return
         self.view.email = self.email.value
         await interaction.response.send_message("Email Set!", ephemeral=True)
 

@@ -8,10 +8,10 @@ def gen_activities(bot, options: dict = None) -> Activity:
     """Generates and returns a random activity from the provided options"""
     if not options:
         options = {
-            0: ["watch", f"{len(bot.users):,} Student's"],
+            0: ["watch", f"{len(bot.users):,} Students"],
             1: ["watch", "Youtube"],
-            2: ["listen", "Cyber Security Lecture's"],
-            3: ["watch", "Computer Science Lecture's"],
+            2: ["listen", "Cyber Security Lectures"],
+            3: ["watch", "Computer Science Lectures"],
             4: ["play", "Minecraft"],
         }
 
