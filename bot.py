@@ -88,7 +88,7 @@ class UniversityBot(commands.AutoShardedBot):
             users.append(self.get_user(owner_id))
         return users
 
-    @tasks.loop(seconds=30) #seconds=180)
+    @tasks.loop(seconds=180)
     async def change_activity(self):
         """Changes the bot's activity every 30 seconds"""
 
