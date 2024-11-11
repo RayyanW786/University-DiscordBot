@@ -1,24 +1,34 @@
 from __future__ import annotations
 
 from typing import TYPE_CHECKING, Any, Dict, Optional
+
 import discord
-from discord.ext.commands import Paginator as CommandPaginator
 from discord.ext import menus
+from discord.ext.commands import Paginator as CommandPaginator
 
 if TYPE_CHECKING:
     from utils.context import Context
 
-__all__ = ["NumberedPageModal", "RoboPages", "FieldPageSource", "TextPageSource", "SimplePageSource", "SimplePages"]
+__all__ = [
+    "NumberedPageModal",
+    "RoboPages",
+    "FieldPageSource",
+    "TextPageSource",
+    "SimplePageSource",
+    "SimplePages",
+]
 
 
-class NumberedPageModal(discord.ui.Modal, title='Go to page'):
-    page = discord.ui.TextInput(label='Page', placeholder='Enter a number', min_length=1)
+class NumberedPageModal(discord.ui.Modal, title="Go to page"):
+    page = discord.ui.TextInput(
+        label="Page", placeholder="Enter a number", min_length=1
+    )
 
     def __init__(self, max_pages: Optional[int]) -> None:
         super().__init__()
         if max_pages is not None:
             as_string = str(max_pages)
-            self.page.placeholder = f'Enter a number between 1 and {as_string}'
+            self.page.placeholder = f"Enter a number between 1 and {as_string}"
             self.page.max_length = len(as_string)
 
     async def on_submit(self, interaction: discord.Interaction) -> None:
@@ -70,13 +80,15 @@ class RoboPages(discord.ui.View):
         if isinstance(value, dict):
             return value
         elif isinstance(value, str):
-            return {'content': value, 'embed': None}
+            return {"content": value, "embed": None}
         elif isinstance(value, discord.Embed):
-            return {'embed': value, 'content': None}
+            return {"embed": value, "content": None}
         else:
             return {}
 
-    async def show_page(self, interaction: discord.Interaction, page_number: int) -> None:
+    async def show_page(
+        self, interaction: discord.Interaction, page_number: int
+    ) -> None:
         page = await self.source.get_page(page_number)
         self.current_page = page_number
         kwargs = await self._get_kwargs_from_page(page)
@@ -92,8 +104,12 @@ class RoboPages(discord.ui.View):
         self.go_to_first_page.disabled = page_number == 0
         if self.compact:
             max_pages = self.source.get_max_pages()
-            self.go_to_last_page.disabled = max_pages is None or (page_number + 1) >= max_pages
-            self.go_to_next_page.disabled = max_pages is not None and (page_number + 1) >= max_pages
+            self.go_to_last_page.disabled = (
+                max_pages is None or (page_number + 1) >= max_pages
+            )
+            self.go_to_next_page.disabled = (
+                max_pages is not None and (page_number + 1) >= max_pages
+            )
             self.go_to_previous_page.disabled = page_number == 0
             return
 
@@ -109,12 +125,14 @@ class RoboPages(discord.ui.View):
             self.go_to_last_page.disabled = (page_number + 1) >= max_pages
             if (page_number + 1) >= max_pages:
                 self.go_to_next_page.disabled = True
-                self.go_to_next_page.label = '…'
+                self.go_to_next_page.label = "…"
             if page_number == 0:
                 self.go_to_previous_page.disabled = True
-                self.go_to_previous_page.label = '…'
+                self.go_to_previous_page.label = "…"
 
-    async def show_checked_page(self, interaction: discord.Interaction, page_number: int) -> None:
+    async def show_checked_page(
+        self, interaction: discord.Interaction, page_number: int
+    ) -> None:
         max_pages = self.source.get_max_pages()
         try:
             if max_pages is None:
@@ -129,87 +147,112 @@ class RoboPages(discord.ui.View):
     async def interaction_check(self, interaction: discord.Interaction) -> bool:
         if interaction.user and interaction.user.id == self.author.id:
             return True
-        await interaction.response.send_message('This pagination menu cannot be controlled by you, sorry!', ephemeral=True)
+        await interaction.response.send_message(
+            "This pagination menu cannot be controlled by you, sorry!", ephemeral=True
+        )
         return False
 
     async def on_timeout(self) -> None:
         if self.message:
             await self.message.edit(view=None)
 
-    async def on_error(self, interaction: discord.Interaction, error: Exception, item: discord.ui.Item) -> None:
+    async def on_error(
+        self, interaction: discord.Interaction, error: Exception, item: discord.ui.Item
+    ) -> None:
         if interaction.response.is_done():
-            await interaction.followup.send('An unknown error occurred, sorry', ephemeral=True)
+            await interaction.followup.send(
+                "An unknown error occurred, sorry", ephemeral=True
+            )
         else:
-            await interaction.response.send_message('An unknown error occurred, sorry', ephemeral=True)
+            await interaction.response.send_message(
+                "An unknown error occurred, sorry", ephemeral=True
+            )
 
     async def start_with_ctx(
-            self,
-            *,
-            ctx: Context,
-            content: Optional[str] = None,
-            ephemeral: bool = False
+        self, *, ctx: Context, content: Optional[str] = None, ephemeral: bool = False
     ) -> None:
         if self.check_embeds and not ctx.channel.permissions_for(ctx.me).embed_links:  # type: ignore
-            await ctx.send('Bot does not have embed links permission in this channel.', ephemeral=True)
+            await ctx.send(
+                "Bot does not have embed links permission in this channel.",
+                ephemeral=True,
+            )
             return
 
         await self.source._prepare_once()
         page = await self.source.get_page(0)
         kwargs = await self._get_kwargs_from_page(page)
         if content:
-            kwargs.setdefault('content', content)
+            kwargs.setdefault("content", content)
 
         self._update_labels(0)
         self.message = await ctx.send(**kwargs, view=self, ephemeral=ephemeral)
 
     async def start_with_interaction(
-            self,
-            *,
-            inter: discord.Interaction,
-            content: Optional[str] = None,
-            ephemeral: bool = False
+        self,
+        *,
+        inter: discord.Interaction,
+        content: Optional[str] = None,
+        ephemeral: bool = False,
     ) -> None:
-        if self.check_embeds and not self.ctx.channel.permissions_for(self.ctx.me).embed_links:  # type: ignore
-            await inter.response.send_message('Bot does not have embed links permission in this channel.', ephemeral=True)
+        if (
+            self.check_embeds
+            and not self.ctx.channel.permissions_for(self.ctx.me).embed_links
+        ):  # type: ignore
+            await inter.response.send_message(
+                "Bot does not have embed links permission in this channel.",
+                ephemeral=True,
+            )
             return
 
         await self.source._prepare_once()
         page = await self.source.get_page(0)
         kwargs = await self._get_kwargs_from_page(page)
         if content:
-            kwargs.setdefault('content', content)
+            kwargs.setdefault("content", content)
 
         self._update_labels(0)
         await inter.response.send_message(**kwargs, view=self, ephemeral=ephemeral)
         self.message = await inter.original_response()
 
-    @discord.ui.button(label='≪', style=discord.ButtonStyle.grey)
-    async def go_to_first_page(self, interaction: discord.Interaction, button: discord.ui.Button):
+    @discord.ui.button(label="≪", style=discord.ButtonStyle.grey)
+    async def go_to_first_page(
+        self, interaction: discord.Interaction, button: discord.ui.Button
+    ):
         """go to the first page"""
         await self.show_page(interaction, 0)
 
-    @discord.ui.button(label='Back', style=discord.ButtonStyle.blurple)
-    async def go_to_previous_page(self, interaction: discord.Interaction, button: discord.ui.Button):
+    @discord.ui.button(label="Back", style=discord.ButtonStyle.blurple)
+    async def go_to_previous_page(
+        self, interaction: discord.Interaction, button: discord.ui.Button
+    ):
         """go to the previous page"""
         await self.show_checked_page(interaction, self.current_page - 1)
 
-    @discord.ui.button(label='Current', style=discord.ButtonStyle.grey, disabled=True)
-    async def go_to_current_page(self, interaction: discord.Interaction, button: discord.ui.Button):
+    @discord.ui.button(label="Current", style=discord.ButtonStyle.grey, disabled=True)
+    async def go_to_current_page(
+        self, interaction: discord.Interaction, button: discord.ui.Button
+    ):
         pass
 
-    @discord.ui.button(label='Next', style=discord.ButtonStyle.blurple)
-    async def go_to_next_page(self, interaction: discord.Interaction, button: discord.ui.Button):
+    @discord.ui.button(label="Next", style=discord.ButtonStyle.blurple)
+    async def go_to_next_page(
+        self, interaction: discord.Interaction, button: discord.ui.Button
+    ):
         """go to the next page"""
         await self.show_checked_page(interaction, self.current_page + 1)
 
-    @discord.ui.button(label='≫', style=discord.ButtonStyle.grey)
-    async def go_to_last_page(self, interaction: discord.Interaction, button: discord.ui.Button):
+    @discord.ui.button(label="≫", style=discord.ButtonStyle.grey)
+    async def go_to_last_page(
+        self, interaction: discord.Interaction, button: discord.ui.Button
+    ):
         """go to the last page"""
         # The call here is safe because it's guarded by skip_if
         await self.show_page(interaction, self.source.get_max_pages() - 1)  # type: ignore
 
-    @discord.ui.button(label='Skip to page...', style=discord.ButtonStyle.grey)
-    async def numbered_page(self, interaction: discord.Interaction, button: discord.ui.Button):
+    @discord.ui.button(label="Skip to page...", style=discord.ButtonStyle.grey)
+    async def numbered_page(
+        self, interaction: discord.Interaction, button: discord.ui.Button
+    ):
         """lets you type a page number to go to"""
         if self.message is None:
             return
@@ -219,25 +262,31 @@ class RoboPages(discord.ui.View):
         timed_out = await modal.wait()
 
         if timed_out:
-            await interaction.followup.send('Took too long', ephemeral=True)
+            await interaction.followup.send("Took too long", ephemeral=True)
             return
         elif self.is_finished():
-            await modal.interaction.response.send_message('Took too long', ephemeral=True)
+            await modal.interaction.response.send_message(
+                "Took too long", ephemeral=True
+            )
             return
 
         value = str(modal.page.value)
         if not value.isdigit():
-            await modal.interaction.response.send_message(f'Expected a number not {value!r}', ephemeral=True)
+            await modal.interaction.response.send_message(
+                f"Expected a number not {value!r}", ephemeral=True
+            )
             return
 
         value = int(value)
         await self.show_checked_page(modal.interaction, value - 1)
         if not modal.interaction.response.is_done():
-            error = modal.page.placeholder.replace('Enter', 'Expected')  # type: ignore # Can't be None
+            error = modal.page.placeholder.replace("Enter", "Expected")  # type: ignore # Can't be None
             await modal.interaction.response.send_message(error, ephemeral=True)
 
-    @discord.ui.button(label='Quit', style=discord.ButtonStyle.red)
-    async def stop_pages(self, interaction: discord.Interaction, button: discord.ui.Button):
+    @discord.ui.button(label="Quit", style=discord.ButtonStyle.red)
+    async def stop_pages(
+        self, interaction: discord.Interaction, button: discord.ui.Button
+    ):
         """stops the pagination session."""
         await interaction.response.defer()
         await interaction.delete_original_response()
@@ -260,7 +309,9 @@ class FieldPageSource(menus.ListPageSource):
         self.clear_description: bool = clear_description
         self.inline: bool = inline
 
-    async def format_page(self, menu: RoboPages, entries: list[tuple[Any, Any]]) -> discord.Embed:
+    async def format_page(
+        self, menu: RoboPages, entries: list[tuple[Any, Any]]
+    ) -> discord.Embed:
         self.embed.clear_fields()
         if self.clear_description:
             self.embed.description = None
@@ -270,16 +321,18 @@ class FieldPageSource(menus.ListPageSource):
 
         maximum = self.get_max_pages()
         if maximum > 1:
-            text = f'Page {menu.current_page + 1}/{maximum} ({len(self.entries)} entries)'
+            text = (
+                f"Page {menu.current_page + 1}/{maximum} ({len(self.entries)} entries)"
+            )
             self.embed.set_footer(text=text)
 
         return self.embed
 
 
 class TextPageSource(menus.ListPageSource):
-    def __init__(self, text, *, prefix='```', suffix='```', max_size=2000):
+    def __init__(self, text, *, prefix="```", suffix="```", max_size=2000):
         pages = CommandPaginator(prefix=prefix, suffix=suffix, max_size=max_size - 200)
-        for line in text.split('\n'):
+        for line in text.split("\n"):
             pages.add_line(line)
 
         super().__init__(entries=pages.pages, per_page=1)
@@ -287,7 +340,7 @@ class TextPageSource(menus.ListPageSource):
     async def format_page(self, menu, content):
         maximum = self.get_max_pages()
         if maximum > 1:
-            return f'{content}\nPage {menu.current_page + 1}/{maximum}'
+            return f"{content}\nPage {menu.current_page + 1}/{maximum}"
         return content
 
 
@@ -295,14 +348,16 @@ class SimplePageSource(menus.ListPageSource):
     async def format_page(self, menu, entries):
         pages = []
         for index, entry in enumerate(entries, start=menu.current_page * self.per_page):
-            pages.append(f'{index + 1}. {entry}')
+            pages.append(f"{index + 1}. {entry}")
 
         maximum = self.get_max_pages()
         if maximum > 1:
-            footer = f'Page {menu.current_page + 1}/{maximum} ({len(self.entries)} entries)'
+            footer = (
+                f"Page {menu.current_page + 1}/{maximum} ({len(self.entries)} entries)"
+            )
             menu.embed.set_footer(text=footer)
 
-        menu.embed.description = '\n'.join(pages)
+        menu.embed.description = "\n".join(pages)
         return menu.embed
 
 

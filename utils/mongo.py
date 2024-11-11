@@ -1,7 +1,7 @@
-import discord
-import datetime
 import logging
-from typing import List, Dict
+from typing import Dict, List
+
+import discord
 from alaric import Document
 from motor.motor_asyncio import AsyncIOMotorClient
 

@@ -1,25 +1,28 @@
 from __future__ import annotations
 
-import discord
-from discord.ui import Modal, View, TextInput, button
-from typing import TYPE_CHECKING, Dict, List
-import re
 import os
+import re
+from typing import TYPE_CHECKING, List
+
+import discord
+from discord.ui import Modal, TextInput, View, button
 from dotenv import load_dotenv
 
 if TYPE_CHECKING:
     from utils.context import Context
+
     from .verify import Verification
-    from bot import UniversityBot
 
 
 load_dotenv()
 UNIVERSITY_EMAIL_SUFFIX = os.getenv("UNIVERSITY_EMAIL_SUFFIX")
 EMAIL_RE = rf"\d+@{re.escape(UNIVERSITY_EMAIL_SUFFIX)}"
 try:
-    ROLES_ON_VERIFICTION: List[int] = [int(v) for v in os.getenv("ROLES_ON_VERIFICATION").split(",")]
+    ROLES_ON_VERIFICATION: List[int] = [
+        int(v) for v in os.getenv("ROLES_ON_VERIFICATION").split(",")
+    ]
 except AttributeError:
-    ROLES_ON_VERIFICTION = []
+    ROLES_ON_VERIFiCATION = []
 
 
 class SetEmailModal(Modal, title="Edit Email Address"):
@@ -31,7 +34,7 @@ class SetEmailModal(Modal, title="Edit Email Address"):
             default=self.view.email,
             placeholder="xyz@email.com",
             min_length=10,
-            max_length=50
+            max_length=50,
         )
         self.add_item(self.email)
 
@@ -42,7 +45,10 @@ class SetEmailModal(Modal, title="Edit Email Address"):
         found = await self.view.ctx.bot.db.verification.find({"email": self.email.value})
         if found:
             # email is already been used to verify another person
-            await interaction.response.send_message("This email has already been used to verify another party!", ephemeral=True)
+            await interaction.response.send_message(
+                "This email has already been used to verify another party!",
+                ephemeral=True,
+            )
             return
         self.view.email = self.email.value
         await interaction.response.send_message("Email Set!", ephemeral=True)
@@ -56,7 +62,7 @@ class VerifyModal(Modal, title="OTP"):
             label="OTP Code",
             placeholder="The one time password sent to your email!",
             min_length=1,
-            max_length=12
+            max_length=12,
         )
         self.add_item(self.otp_code)
 
@@ -68,10 +74,12 @@ class VerifyModal(Modal, title="OTP"):
 
         otp_code = self.view.cog.get_otp(interaction.user.id)
         if not otp_code:
-            await interaction.response.send_message("OTP code has expired", ephemeral=True)
+            await interaction.response.send_message(
+                "OTP code has expired", ephemeral=True
+            )
             return
 
-        if otp_code['code'] != self.otp_code.value:
+        if otp_code["code"] != self.otp_code.value:
             await interaction.response.send_message("Invalid OTP!", ephemeral=True)
             return
 
@@ -82,14 +90,18 @@ class VerifyModal(Modal, title="OTP"):
             "email": self.view.email,
         }
 
-        await self.view.ctx.bot.db.verification.insert(
-            data
-        )
+        await self.view.ctx.bot.db.verification.insert(data)
 
         self.view.stop()
-        if ROLES_ON_VERIFICTION:
-            roles = [v for v in [interaction.guild.get_role(r) for r in ROLES_ON_VERIFICTION] if v]
-            await interaction.user.add_roles(*roles, atomic=False, reason="Passed Verification")
+        if ROLES_ON_VERIFICATION:
+            roles = [
+                v
+                for v in [interaction.guild.get_role(r) for r in ROLES_ON_VERIFICATION]
+                if v
+            ]
+            await interaction.user.add_roles(
+                *roles, atomic=False, reason="Passed Verification"
+            )
         await interaction.followup.send("You are now verified!", ephemeral=True)
 
 
@@ -107,11 +119,15 @@ class VerifyView(View):
         return False
 
     @button(label="Email", style=discord.ButtonStyle.blurple)
-    async def email(self, interaction: discord.Interaction, btn: discord.Button) -> None:
+    async def email(
+        self, interaction: discord.Interaction, btn: discord.Button
+    ) -> None:
         await interaction.response.send_modal(SetEmailModal(self))
 
     @button(label="Send OTP", style=discord.ButtonStyle.red)
-    async def send_register_code(self, interaction: discord.Interaction, btn: discord.Button) -> None:
+    async def send_register_code(
+        self, interaction: discord.Interaction, btn: discord.Button
+    ) -> None:
         if not self.email:
             await interaction.response.send_message(
                 "You need to set an email!", ephemeral=True
@@ -122,25 +138,29 @@ class VerifyView(View):
         if otp:
             await interaction.followup.send(
                 f"OTP was already sent and expires {discord.utils.format_dt(otp['expires'], 'R')}",
-                ephemeral=True
+                ephemeral=True,
             )
             return
         otp_code = self.cog.generate_otp(interaction.user.id)
         result = await self.ctx.bot.email.send_email(
             self.email,
             "Discord Verification",
-            f"Hello,\n\nYour one time password is: {otp_code['code']}"
+            f"Hello,\n\nYour one time password is: {otp_code['code']}",
         )
         if result:
-            await interaction.followup.send("An otp code has been sent to your email!\nMake sure to check your junk folder!", ephemeral=True)
+            await interaction.followup.send(
+                "An otp code has been sent to your email!\nMake sure to check your junk folder!",
+                ephemeral=True,
+            )
         else:
             await interaction.followup.send(
-                "The email service seems to be down!\nTry again later.",
-                ephemeral=True
+                "The email service seems to be down!\nTry again later.", ephemeral=True
             )
 
     @button(label="Verify", style=discord.ButtonStyle.green)
-    async def register(self, interaction: discord.Interaction, btn: discord.Button) -> None:
+    async def register(
+        self, interaction: discord.Interaction, btn: discord.Button
+    ) -> None:
         if not self.email:
             await interaction.response.send_message(
                 "You need to set an email!", ephemeral=True

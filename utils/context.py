@@ -1,22 +1,40 @@
 from __future__ import annotations
 
-from typing import TYPE_CHECKING, Any, Callable, Generic, Iterable, TypeVar, Union, Optional, Sequence
-from discord.ext import commands
-import discord
 import io
+from typing import (
+    TYPE_CHECKING,
+    Any,
+    Callable,
+    Generic,
+    Iterable,
+    Optional,
+    Sequence,
+    TypeVar,
+    Union,
+)
+
 import aiohttp
+import discord
+from discord.ext import commands
 
 if TYPE_CHECKING:
     from bot import UniversityBot
 
-T = TypeVar('T')
+T = TypeVar("T")
 
 __all__ = ["ConfirmationView", "DisambiguatorView", "Context", "GuildContext"]
 
 
 class ConfirmationView(discord.ui.View):
-    def __init__(self, *, timeout: float, author_id: int, delete_after: bool, confirm_label: str,
-                 cancel_label: str) -> None:
+    def __init__(
+        self,
+        *,
+        timeout: float,
+        author_id: int,
+        delete_after: bool,
+        confirm_label: str,
+        cancel_label: str,
+    ) -> None:
         super().__init__(timeout=timeout)
         self.value: Optional[bool] = None
         self.delete_after: bool = delete_after
@@ -29,7 +47,9 @@ class ConfirmationView(discord.ui.View):
         if interaction.user and interaction.user.id == self.author_id:
             return True
         else:
-            await interaction.response.send_message('This confirmation dialog is not for you.', ephemeral=True)
+            await interaction.response.send_message(
+                "This confirmation dialog is not for you.", ephemeral=True
+            )
             return False
 
     async def on_timeout(self) -> None:
@@ -42,7 +62,9 @@ class ConfirmationView(discord.ui.View):
             await self.message.edit(view=self)
 
     @discord.ui.button(style=discord.ButtonStyle.green)
-    async def confirm(self, interaction: discord.Interaction, button: discord.ui.Button):
+    async def confirm(
+        self, interaction: discord.Interaction, button: discord.ui.Button
+    ):
         self.value = True
         await interaction.response.defer()
         if self.delete_after:
@@ -94,7 +116,9 @@ class DisambiguatorView(discord.ui.View, Generic[T]):
 
     async def interaction_check(self, interaction: discord.Interaction) -> bool:
         if interaction.user.id != self.ctx.author.id:
-            await interaction.response.send_message('This select menu is not meant for you, sorry.', ephemeral=True)
+            await interaction.response.send_message(
+                "This select menu is not meant for you, sorry.", ephemeral=True
+            )
             return False
         return True
 
@@ -109,7 +133,9 @@ class DisambiguatorView(discord.ui.View, Generic[T]):
 
 
 class Context(commands.Context):
-    channel: Union[discord.VoiceChannel, discord.TextChannel, discord.Thread, discord.DMChannel]
+    channel: Union[
+        discord.VoiceChannel, discord.TextChannel, discord.Thread, discord.DMChannel
+    ]
     prefix: str
     command: commands.Command[Any, Any]
     bot: UniversityBot
@@ -119,23 +145,23 @@ class Context(commands.Context):
 
     async def entry_to_code(self, entries: Iterable[tuple[str, str]]) -> None:
         width = max(len(a) for a, b in entries)
-        output = ['```']
+        output = ["```"]
         for name, entry in entries:
-            output.append(f'{name:<{width}}: {entry}')
-        output.append('```')
-        await self.send('\n'.join(output))
+            output.append(f"{name:<{width}}: {entry}")
+        output.append("```")
+        await self.send("\n".join(output))
 
     async def indented_entry_to_code(self, entries: Iterable[tuple[str, str]]) -> None:
         width = max(len(a) for a, b in entries)
-        output = ['```']
+        output = ["```"]
         for name, entry in entries:
-            output.append(f'\u200b{name:>{width}}: {entry}')
-        output.append('```')
-        await self.send('\n'.join(output))
+            output.append(f"\u200b{name:>{width}}: {entry}")
+        output.append("```")
+        await self.send("\n".join(output))
 
     def __repr__(self) -> str:
         # we need this for our cache key strategy
-        return '<Context>'
+        return "<Context>"
 
     @property
     def session(self) -> aiohttp.ClientSession:
@@ -155,34 +181,38 @@ class Context(commands.Context):
             return ref.resolved
         return None
 
-    async def disambiguate(self, matches: list[T], entry: Callable[[T], Any], *, ephemeral: bool = False) -> T:
+    async def disambiguate(
+        self, matches: list[T], entry: Callable[[T], Any], *, ephemeral: bool = False
+    ) -> T:
         if len(matches) == 0:
-            raise ValueError('No results found.')
+            raise ValueError("No results found.")
 
         if len(matches) == 1:
             return matches[0]
 
         if len(matches) > 25:
-            raise ValueError('Too many results... sorry.')
+            raise ValueError("Too many results... sorry.")
 
         view = DisambiguatorView(self, matches, entry)
         view.message = await self.send(
-            'There are too many matches... Which one did you mean?', view=view, ephemeral=ephemeral
+            "There are too many matches... Which one did you mean?",
+            view=view,
+            ephemeral=ephemeral,
         )
         await view.wait()
         return view.selected
 
     async def prompt(
-            self,
-            message: str,
-            *,
-            timeout: float = 60.0,
-            delete_after: bool = True,
-            author_id: Optional[int] = None,
-            confirm_label: str = "Confirm!",
-            cancel_label: str = "Cancel",
-            am: discord.AllowedMentions | None = None,
-            ephemeral: bool = True
+        self,
+        message: str,
+        *,
+        timeout: float = 60.0,
+        delete_after: bool = True,
+        author_id: Optional[int] = None,
+        confirm_label: str = "Confirm!",
+        cancel_label: str = "Cancel",
+        am: discord.AllowedMentions | None = None,
+        ephemeral: bool = True,
     ) -> Optional[bool]:
         """An interactive reaction confirmation dialog.
 
@@ -222,7 +252,9 @@ class Context(commands.Context):
             confirm_label=confirm_label,
             cancel_label=cancel_label,
         )
-        view.message = await self.send(message, view=view, ephemeral=ephemeral, allowed_mentions=am)
+        view.message = await self.send(
+            message, view=view, ephemeral=ephemeral, allowed_mentions=am
+        )
         await view.wait()
         return view.value
 
@@ -234,15 +266,13 @@ class Context(commands.Context):
         return ", ".join(items[:-1]) + (", and ") + items[-1]
 
     def tick(self, opt: Optional[bool], label: Optional[str] = None) -> str:
-        lookup = {
-            True: "success",
-            False: "error",
-            None: "info"
-        }
+        lookup = {True: "success", False: "error", None: "info"}
 
-        emoji = self.bot.themes.get_emoji_for(lookup.get(opt), theme=self.bot.main_config.get("theme", "default"))
+        emoji = self.bot.themes.get_emoji_for(
+            lookup.get(opt), theme=self.bot.main_config.get("theme", "default")
+        )
         if label is not None:
-            return f'{emoji}: {label}'
+            return f"{emoji}: {label}"
         return emoji
 
     async def show_help(self, command: Any = None) -> None:
@@ -251,11 +281,13 @@ class Context(commands.Context):
         If no command is given, then it'll show help for the current
         command.
         """
-        cmd = self.bot.get_command('help')
+        cmd = self.bot.get_command("help")
         command = command or self.command.qualified_name
         await self.invoke(cmd, command=command)  # type: ignore
 
-    async def safe_send(self, content: str, *, escape_mentions: bool = True, **kwargs) -> discord.Message:
+    async def safe_send(
+        self, content: str, *, escape_mentions: bool = True, **kwargs
+    ) -> discord.Message:
         """Same as send except with some safe guards.
 
         1) If the message is too long then it sends a file with the results instead.
@@ -266,23 +298,29 @@ class Context(commands.Context):
 
         if len(content) > 2000:
             fp = io.BytesIO(content.encode())
-            kwargs.pop('file', None)
-            return await self.send(file=discord.File(fp, filename='message_too_long.txt'), **kwargs)
+            kwargs.pop("file", None)
+            return await self.send(
+                file=discord.File(fp, filename="message_too_long.txt"), **kwargs
+            )
         else:
             return await self.send(content)
 
-    async def send_embed(self, style: str, content: str, eph: bool = False, reply: bool = False,
-                         view: discord.ui.View = None, theme: str = None):
+    async def send_embed(
+        self,
+        style: str,
+        content: str,
+        eph: bool = False,
+        reply: bool = False,
+        view: discord.ui.View = None,
+        theme: str = None,
+    ):
         """
         Makes and sends our embed, this allows for custom color, emoji etc.
         """
         mode = self.send
         if reply:
             mode = self.reply
-        embed = discord.Embed(
-            description=content,
-            colour=discord.Colour.blurple()
-        )
+        embed = discord.Embed(description=content, colour=discord.Colour.blurple())
         return await mode(embed=embed, mention_author=reply, ephemeral=eph, view=view)
 
 

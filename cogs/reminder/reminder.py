@@ -1,27 +1,31 @@
 from __future__ import annotations
-from typing import TYPE_CHECKING, Any, Optional
-from typing_extensions import Annotated
 
-from utils import time, formats
-from discord.ext import commands
-from discord import app_commands
-
-import alaric
-import discord
 import asyncio
 import datetime
 import textwrap
+from typing import TYPE_CHECKING, Any, Optional
+
+import alaric
+import discord
+from discord import app_commands
+from discord.ext import commands
+from typing_extensions import Annotated
+
+from utils import formats, time
 
 if TYPE_CHECKING:
     from typing_extensions import Self
-    from utils.context import Context
+
     from bot import UniversityBot
+    from utils.context import Context
 
 from pymongo.errors import PyMongoError
 
 
-class SnoozeModal(discord.ui.Modal, title='Snooze'):
-    duration = discord.ui.TextInput(label='Duration', placeholder='10 minutes', default='10 minutes', min_length=2)
+class SnoozeModal(discord.ui.Modal, title="Snooze"):
+    duration = discord.ui.TextInput(
+        label="Duration", placeholder="10 minutes", default="10 minutes", min_length=2
+    )
 
     def __init__(self, parent: ReminderView, cog: Reminder, timer: Timer) -> None:
         super().__init__()
@@ -34,7 +38,8 @@ class SnoozeModal(discord.ui.Modal, title='Snooze'):
             when = time.FutureTime(str(self.duration)).dt
         except Exception:
             await interaction.response.send_message(
-                'Duration could not be parsed, sorry. Try something like "5 minutes" or "1 hour"', ephemeral=True
+                'Duration could not be parsed, sorry. Try something like "5 minutes" or "1 hour"',
+                ephemeral=True,
             )
             return
 
@@ -48,37 +53,44 @@ class SnoozeModal(discord.ui.Modal, title='Snooze'):
             created=interaction.created_at,
         )
         kwargs = self.timer.kwargs
-        author_id, _, message = kwargs['author'], kwargs['channel'], kwargs['message']
+        author_id, _, message = kwargs["author"], kwargs["channel"], kwargs["message"]
         delta = time.human_timedelta(when, source=refreshed.created_at)
         await interaction.followup.send(
-            f"Alright <@{author_id}>, I've snoozed your reminder for {delta}: {message}", ephemeral=True
+            f"Alright <@{author_id}>, I've snoozed your reminder for {delta}: {message}",
+            ephemeral=True,
         )
 
 
-class SnoozeButton(discord.ui.Button['ReminderView']):
+class SnoozeButton(discord.ui.Button["ReminderView"]):
     def __init__(self, cog: Reminder, timer: Timer) -> None:
-        super().__init__(label='Snooze', style=discord.ButtonStyle.blurple)
+        super().__init__(label="Snooze", style=discord.ButtonStyle.blurple)
         self.timer: Timer = timer
         self.cog: Reminder = cog
 
     async def callback(self, interaction: discord.Interaction) -> Any:
         assert self.view is not None
-        await interaction.response.send_modal(SnoozeModal(self.view, self.cog, self.timer))
+        await interaction.response.send_modal(
+            SnoozeModal(self.view, self.cog, self.timer)
+        )
 
 
 class ReminderView(discord.ui.View):
     message: discord.Message
 
-    def __init__(self, *, url: str, timer: Timer, cog: Reminder, author_id: int) -> None:
+    def __init__(
+        self, *, url: str, timer: Timer, cog: Reminder, author_id: int
+    ) -> None:
         super().__init__(timeout=300)
         self.author_id: int = author_id
         self.snooze = SnoozeButton(cog, timer)
-        self.add_item(discord.ui.Button(url=url, label='Go to original message'))
+        self.add_item(discord.ui.Button(url=url, label="Go to original message"))
         self.add_item(self.snooze)
 
     async def interaction_check(self, interaction: discord.Interaction) -> bool:
         if interaction.user.id != self.author_id:
-            await interaction.response.send_message('This snooze button is not for you, sorry!', ephemeral=True)
+            await interaction.response.send_message(
+                "This snooze button is not for you, sorry!", ephemeral=True
+            )
             return False
         return True
 
@@ -88,33 +100,35 @@ class ReminderView(discord.ui.View):
 
 
 class Timer:
-    __slots__ = ('extras', 'kwargs', 'event', 'id', 'created_at', 'expires')
+    __slots__ = ("extras", "kwargs", "event", "id", "created_at", "expires")
 
     def __init__(self, *, record):
-        self.id: Optional[int] = record.get('_id', None)
+        self.id: Optional[int] = record.get("_id", None)
 
         self.kwargs: dict[str, Any] = {}
-        self.event: str = record['event']
-        self.created_at: datetime.datetime = record['created']
-        self.expires: datetime.datetime = record['expires'].replace(tzinfo=datetime.timezone.utc)
-        for k, v in record['kwargs'].items():
+        self.event: str = record["event"]
+        self.created_at: datetime.datetime = record["created"]
+        self.expires: datetime.datetime = record["expires"].replace(
+            tzinfo=datetime.timezone.utc
+        )
+        for k, v in record["kwargs"].items():
             self.kwargs[k] = v
 
     @classmethod
     def temporary(
-            cls,
-            *,
-            expires: datetime.datetime,
-            created: datetime.datetime,
-            event: str,
-            kwargs: dict[str, Any],
+        cls,
+        *,
+        expires: datetime.datetime,
+        created: datetime.datetime,
+        event: str,
+        kwargs: dict[str, Any],
     ) -> Self:
         pseudo = {
-            'id': None,
-            'kwargs': kwargs,
-            'event': event,
-            'created': created,
-            'expires': expires,
+            "id": None,
+            "kwargs": kwargs,
+            "event": event,
+            "created": created,
+            "expires": expires,
         }
         return cls(record=pseudo)
 
@@ -134,11 +148,11 @@ class Timer:
     @property
     def author_id(self) -> Optional[int]:
         if self.kwargs:
-            return self.kwargs['author']
+            return self.kwargs["author"]
         return None
 
     def __repr__(self) -> str:
-        return f'<Timer created={self.created_at} expires={self.expires} event={self.event}>'
+        return f"<Timer created={self.created_at} expires={self.expires} event={self.event}>"
 
 
 class Reminder(commands.Cog):
@@ -152,7 +166,7 @@ class Reminder(commands.Cog):
 
     @property
     def display_emoji(self) -> discord.PartialEmoji:
-        return discord.PartialEmoji(name='elem_clock', id=1077266893213274182)
+        return discord.PartialEmoji(name="elem_clock", id=1077266893213274182)
 
     def cog_unload(self) -> None:
         self._task.cancel()
@@ -161,13 +175,23 @@ class Reminder(commands.Cog):
         if isinstance(error, commands.BadArgument):
             await ctx.send(str(error))
         if isinstance(error, commands.TooManyArguments):
-            await ctx.send(f'You called the {ctx.command.name} command with too many arguments.')
+            await ctx.send(
+                f"You called the {ctx.command.name} command with too many arguments."
+            )
 
     async def get_active_timer(self, *, days: int = 7) -> Optional[Timer]:
-
-        cur = self.bot.db.reminders.create_cursor().set_limit(1).set_filter({
-            "expires": {"$lt": discord.utils.utcnow() + datetime.timedelta(days=days)}
-        }).set_sort(("expires", alaric.Ascending))
+        cur = (
+            self.bot.db.reminders.create_cursor()
+            .set_limit(1)
+            .set_filter(
+                {
+                    "expires": {
+                        "$lt": discord.utils.utcnow() + datetime.timedelta(days=days)
+                    }
+                }
+            )
+            .set_sort(("expires", alaric.Ascending))
+        )
         record = [c async for c in cur]
         return Timer(record=record[0]) if record else None
 
@@ -185,9 +209,9 @@ class Reminder(commands.Cog):
         return await self.get_active_timer(days=days)  # type: ignore
 
     async def call_timer(self, timer: Timer) -> None:
-        await self.bot.db.reminders.delete({'_id': timer.id})
+        await self.bot.db.reminders.delete({"_id": timer.id})
         # dispatch the event
-        event_name = f'{timer.event}_timer_complete'
+        event_name = f"{timer.event}_timer_complete"
         self.bot.dispatch(event_name, timer)
 
     async def dispatch_timers(self) -> None:
@@ -211,10 +235,12 @@ class Reminder(commands.Cog):
 
     async def short_timer_optimisation(self, seconds: float, timer: Timer) -> None:
         await asyncio.sleep(seconds)
-        event_name = f'{timer.event}_timer_complete'
+        event_name = f"{timer.event}_timer_complete"
         self.bot.dispatch(event_name, timer)
 
-    async def create_timer(self, when: datetime.datetime, event: str, /, **kwargs: Any) -> Timer:
+    async def create_timer(
+        self, when: datetime.datetime, event: str, /, **kwargs: Any
+    ) -> Timer:
         r"""Creates a timer.
 
         Parameters
@@ -239,7 +265,7 @@ class Reminder(commands.Cog):
         """
 
         try:
-            now = kwargs.pop('created')
+            now = kwargs.pop("created")
         except KeyError:
             now = discord.utils.utcnow()
 
@@ -274,12 +300,15 @@ class Reminder(commands.Cog):
 
         return timer
 
-    @commands.hybrid_group(aliases=['timer', 'remind', 'remindme'], usage='<when>')
+    @commands.hybrid_group(aliases=["timer", "remind", "remindme"], usage="<when>")
     async def reminder(
-            self,
-            ctx: Context,
-            *,
-            when: Annotated[time.FriendlyTimeResult, time.UserFriendlyTime(commands.clean_content, default='…')],
+        self,
+        ctx: Context,
+        *,
+        when: Annotated[
+            time.FriendlyTimeResult,
+            time.UserFriendlyTime(commands.clean_content, default="…"),
+        ],
     ):
         """Reminds you of something after a certain amount of time.
 
@@ -296,11 +325,11 @@ class Reminder(commands.Cog):
         """
 
         if len(when.arg) >= 1500:
-            return await ctx.send('Reminder must be fewer than 1500 characters.')
+            return await ctx.send("Reminder must be fewer than 1500 characters.")
 
         timer = await self.create_timer(
             when.dt,
-            'reminder',
+            "reminder",
             author=ctx.author.id,
             channel=ctx.channel.id,
             message=when.arg,
@@ -311,13 +340,15 @@ class Reminder(commands.Cog):
         msg = f"Alright {ctx.author.mention}, in {delta}: {when.arg}"
         await ctx.send(msg, allowed_mentions=discord.AllowedMentions(users=True))
 
-    @reminder.app_command.command(name='set')
-    @app_commands.describe(when='When to be reminded of something.', text='What to be reminded of')
+    @reminder.app_command.command(name="set")
+    @app_commands.describe(
+        when="When to be reminded of something.", text="What to be reminded of"
+    )
     async def reminder_set(
-            self,
-            interaction: discord.Interaction,
-            when: app_commands.Transform[datetime.datetime, time.TimeTransformer],
-            text: app_commands.Range[str, 1, 1500] = '…',
+        self,
+        interaction: discord.Interaction,
+        when: app_commands.Transform[datetime.datetime, time.TimeTransformer],
+        text: app_commands.Range[str, 1, 1500] = "…",
     ):
         """Sets a reminder to remind you of something at a specific time."""
 
@@ -325,7 +356,7 @@ class Reminder(commands.Cog):
         message = await interaction.original_response()
         timer = await self.create_timer(
             when,
-            'reminder',
+            "reminder",
             author=interaction.user.id,
             channel=interaction.channel_id,
             message=text,
@@ -333,44 +364,57 @@ class Reminder(commands.Cog):
             message_id=message.id,
         )
         delta = time.human_timedelta(when, source=timer.created_at)
-        await interaction.followup.send(f"Alright {interaction.user.mention}, in {delta}: {text}")
+        await interaction.followup.send(
+            f"Alright {interaction.user.mention}, in {delta}: {text}"
+        )
 
     @reminder_set.error
-    async def reminder_set_error(self, interaction: discord.Interaction, error: app_commands.AppCommandError):
+    async def reminder_set_error(
+        self, interaction: discord.Interaction, error: app_commands.AppCommandError
+    ):
         if isinstance(error, time.BadTimeTransform):
             await interaction.response.send_message(str(error), ephemeral=True)
 
-    @reminder.command(name='list', ignore_extra=False)
+    @reminder.command(name="list", ignore_extra=False)
     async def reminder_list(self, ctx: Context):
         """Shows the 10 latest currently running reminders."""
-        cur = self.bot.db.reminders.create_cursor().set_limit(10).set_filter({
-            "event": "reminder",
-            "kwargs.author": ctx.author.id,
-        }).set_sort(("expires", alaric.Ascending))
+        cur = (
+            self.bot.db.reminders.create_cursor()
+            .set_limit(10)
+            .set_filter(
+                {
+                    "event": "reminder",
+                    "kwargs.author": ctx.author.id,
+                }
+            )
+            .set_sort(("expires", alaric.Ascending))
+        )
 
         records = [c async for c in cur]
 
         if len(records) == 0:
-            return await ctx.send('No currently running reminders.')
+            return await ctx.send("No currently running reminders.")
 
-        e = discord.Embed(colour=discord.Colour.blurple(), title='Reminders')
+        e = discord.Embed(colour=discord.Colour.blurple(), title="Reminders")
 
         if len(records) == 10:
-            e.set_footer(text='Only showing up to 10 reminders.')
+            e.set_footer(text="Only showing up to 10 reminders.")
         else:
-            e.set_footer(text=f'{len(records)} reminder{"s" if len(records) > 1 else ""}')
+            e.set_footer(
+                text=f'{len(records)} reminder{"s" if len(records) > 1 else ""}'
+            )
 
         for record in records:
-            shorten = textwrap.shorten(record['kwargs']['message'], width=512)
+            shorten = textwrap.shorten(record["kwargs"]["message"], width=512)
             e.add_field(
                 name=f"{record['_id']}: {time.format_relative(record['expires'])}",
                 value=shorten,
-                inline=False
+                inline=False,
             )
 
         await ctx.send(embed=e)
 
-    @reminder.command(name='delete', aliases=['remove', 'cancel'], ignore_extra=False)
+    @reminder.command(name="delete", aliases=["remove", "cancel"], ignore_extra=False)
     async def reminder_delete(self, ctx: Context, *, _id: int):
         """Deletes a reminder by its ID.
 
@@ -379,12 +423,14 @@ class Reminder(commands.Cog):
         You must own the reminder to delete it, obviously.
         """
 
-        status = await self.bot.db.reminders.delete({
-            '_id': _id,
-            'kwargs.author': ctx.author.id,
-        })
+        status = await self.bot.db.reminders.delete(
+            {
+                "_id": _id,
+                "kwargs.author": ctx.author.id,
+            }
+        )
         if not status:
-            return await ctx.send('Could not delete any reminders with that ID.')
+            return await ctx.send("Could not delete any reminders with that ID.")
 
         # if the current timer is being deleted
         if self._current_timer and self._current_timer.id == id:
@@ -392,31 +438,31 @@ class Reminder(commands.Cog):
             self._task.cancel()
             self._task = self.bot.loop.create_task(self.dispatch_timers())
 
-        await ctx.send('Successfully deleted reminder.', ephemeral=True)
+        await ctx.send("Successfully deleted reminder.", ephemeral=True)
 
-    @reminder.command(name='clear', ignore_extra=False)
+    @reminder.command(name="clear", ignore_extra=False)
     async def reminder_clear(self, ctx: Context):
         """Clears all reminders you have set."""
 
         # For UX purposes this has to be two queries.
         total = 0
 
-        reminders = await self.bot.db.reminders.find_many({
-            'kwargs.author': ctx.author.id
-        })
+        reminders = await self.bot.db.reminders.find_many(
+            {"kwargs.author": ctx.author.id}
+        )
         for _ in reminders:
             total += 1
 
         if total == 0:
-            return await ctx.send('You do not have any reminders to delete.')
+            return await ctx.send("You do not have any reminders to delete.")
 
-        confirm = await ctx.prompt(f'Are you sure you want to delete {formats.plural(total):reminder}?')
+        confirm = await ctx.prompt(
+            f"Are you sure you want to delete {formats.plural(total):reminder}?"
+        )
         if not confirm:
-            return await ctx.send('Aborting', ephemeral=True)
+            return await ctx.send("Aborting", ephemeral=True)
 
-        deleted = await self.bot.db.reminders.delete({
-            'kwargs.author': ctx.author.id
-        })
+        deleted = await self.bot.db.reminders.delete({"kwargs.author": ctx.author.id})
         deleted_count = 0
         if deleted and deleted.deleted_count:
             deleted_count = deleted.deleted_count
@@ -425,28 +471,43 @@ class Reminder(commands.Cog):
             self._task.cancel()
             self._task = self.bot.loop.create_task(self.dispatch_timers())
 
-        await ctx.send(f'Successfully deleted {deleted_count:,}/{formats.plural(total):reminder}.', ephemeral=True)
+        await ctx.send(
+            f"Successfully deleted {deleted_count:,}/{formats.plural(total):reminder}.",
+            ephemeral=True,
+        )
 
     @commands.Cog.listener()
     async def on_reminder_timer_complete(self, timer: Timer):
-        author_id, channel_id, message = timer.kwargs['author'], timer.kwargs['channel'], timer.kwargs['message']
+        author_id, channel_id, message = (
+            timer.kwargs["author"],
+            timer.kwargs["channel"],
+            timer.kwargs["message"],
+        )
 
         try:
-            channel = self.bot.get_channel(channel_id) or (await self.bot.fetch_channel(channel_id))
+            channel = self.bot.get_channel(channel_id) or (
+                await self.bot.fetch_channel(channel_id)
+            )
         except discord.HTTPException:
             return
 
-        guild_id = channel.guild.id if isinstance(channel, (discord.TextChannel, discord.Thread)) else '@me'
-        message_id = timer.kwargs.get('message_id')
-        msg = f'<@{author_id}>, {timer.human_delta}: {message}'
+        guild_id = (
+            channel.guild.id
+            if isinstance(channel, (discord.TextChannel, discord.Thread))
+            else "@me"
+        )
+        message_id = timer.kwargs.get("message_id")
+        msg = f"<@{author_id}>, {timer.human_delta}: {message}"
         view = discord.utils.MISSING
 
         if message_id:
-            url = f'https://discord.com/channels/{guild_id}/{channel.id}/{message_id}'
+            url = f"https://discord.com/channels/{guild_id}/{channel.id}/{message_id}"
             view = ReminderView(url=url, timer=timer, cog=self, author_id=author_id)
 
         try:
-            msg = await channel.send(msg, view=view, allowed_mentions=discord.AllowedMentions(users=True))  # type: ignore
+            msg = await channel.send(
+                msg, view=view, allowed_mentions=discord.AllowedMentions(users=True)
+            )  # type: ignore
         except discord.HTTPException:
             return
         else:

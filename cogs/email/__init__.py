@@ -1,12 +1,13 @@
 from __future__ import annotations
 
-from .email import Email
 from typing import TYPE_CHECKING
+
+from .email import Email
 
 if TYPE_CHECKING:
     from bot import UniversityBot
 
-__all__ = ['Email']
+__all__ = ["Email"]
 
 
 async def setup(bot: UniversityBot):

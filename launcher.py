@@ -1,12 +1,14 @@
 from __future__ import annotations
 
-import os
-import logging
 import asyncio
-import discord
 import contextlib
+import logging
+import os
 from logging.handlers import RotatingFileHandler
+
+import discord
 from dotenv import load_dotenv
+
 from bot import UniversityBot
 
 try:
@@ -14,7 +16,11 @@ try:
 except ImportError:
     pass
 else:
-    ev_policy = asyncio.WindowsProactorEventLoopPolicy() if os.name == "nt" else uvloop.EventLoopPolicy
+    ev_policy = (
+        asyncio.WindowsProactorEventLoopPolicy()
+        if os.name == "nt"
+        else uvloop.EventLoopPolicy
+    )
     asyncio.set_event_loop_policy(policy=ev_policy)
 
 load_dotenv()
@@ -26,10 +32,10 @@ os.environ["JISHAKU_HIDE"] = "True"
 
 class RemoveNoise(logging.Filter):
     def __init__(self):
-        super().__init__(name='discord.state')
+        super().__init__(name="discord.state")
 
     def filter(self, record: logging.LogRecord) -> bool:
-        if record.levelname == 'WARNING' and 'referencing an unknown' in record.msg:
+        if record.levelname == "WARNING" and "referencing an unknown" in record.msg:
             return False
         return True
 
@@ -42,20 +48,22 @@ def setup_logging():
         discord.utils.setup_logging()
         # __enter__
         max_bytes = 32 * 1024 * 1024  # 32 MiB
-        logging.getLogger('discord').setLevel(logging.INFO)
-        logging.getLogger('discord.http').setLevel(logging.WARNING)
-        logging.getLogger('discord.state').addFilter(RemoveNoise())
+        logging.getLogger("discord").setLevel(logging.INFO)
+        logging.getLogger("discord.http").setLevel(logging.WARNING)
+        logging.getLogger("discord.state").addFilter(RemoveNoise())
 
         log.setLevel(logging.INFO)
         handler = RotatingFileHandler(
-            filename='logs/console.log',
-            encoding='utf-8',
-            mode='w',
+            filename="logs/console.log",
+            encoding="utf-8",
+            mode="w",
             maxBytes=max_bytes,
-            backupCount=5
+            backupCount=5,
         )
-        dt_fmt = '%Y-%m-%d %H:%M:%S'
-        fmt = logging.Formatter('[{asctime}] [{levelname:<7}] {name}: {message}', dt_fmt, style='{')
+        dt_fmt = "%Y-%m-%d %H:%M:%S"
+        fmt = logging.Formatter(
+            "[{asctime}] [{levelname:<7}] {name}: {message}", dt_fmt, style="{"
+        )
         handler.setFormatter(fmt)
         log.addHandler(handler)
 

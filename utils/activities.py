@@ -1,4 +1,5 @@
 import random
+
 from discord import Activity, ActivityType
 
 __all__ = ["gen_activities", "gen_types"]
