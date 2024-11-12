@@ -89,21 +89,21 @@ class Verification(commands.Cog):
                 for role in ROLES_ON_VERIFICATION:
                     if role not in auth_roles:
                         break
-                await ctx.reply("Your account is already verified", ephemeral=True)
             else:
-                roles = [
-                    v
-                    for v in [ctx.guild.get_role(r) for r in ROLES_ON_VERIFICATION]
-                    if v
-                ]
-                await ctx.author.add_roles(
-                    *roles, atomic=False, reason="Passed Verification"
-                )
-                await ctx.reply(
-                    "Your account now has the verified"
-                    + (" role!" if len(roles) == 1 else " roles!"),
-                    ephemeral=True,
-                )
+                await ctx.reply("Your account is already verified", ephemeral=True)
+                return
+
+            roles = [
+                v for v in [ctx.guild.get_role(r) for r in ROLES_ON_VERIFICATION] if v
+            ]
+            await ctx.author.add_roles(
+                *roles, atomic=False, reason="Passed Verification"
+            )
+            await ctx.reply(
+                "Your account now has the verified"
+                + (" role!" if len(roles) == 1 else " roles!"),
+                ephemeral=True,
+            )
             return
 
         view = VerifyView(ctx, self)
